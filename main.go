@@ -2,16 +2,31 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"net"
 	"net/http"
+	"os"
 	"sort"
+	"strings"
 	"time"
 )
 
 func handler(w http.ResponseWriter, r *http.Request) {
 
+	fmt.Fprintln(w, "<html lang=\"en\">")
+
 	// adding debug header to test (strong/weak) ETags in combination with NGINX
 	w.Header().Set("ETag", "HelloWorld")
+
+	fmt.Fprintln(w, "debug env vars:<br>")
+	for _, e := range os.Environ() {
+		pair := strings.Split(e, "=")
+		key := pair[0]
+		if strings.HasPrefix(key, "DEBUG_") {
+			val := pair[1]
+			fmt.Fprintf(w, "<b>%s</b>: %s<br>\n", key, val)
+		}
+	}
 
 	var requestKeys []string
 	for k := range r.Header {
@@ -25,23 +40,18 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Strings(responseKeys)
 
-	fmt.Fprintln(w, "<b>request.RequestURI:</b>", r.RequestURI, "</br>")
-	fmt.Fprintln(w, "<b>request.RemoteAddr:</b>", r.RemoteAddr, "</br>")
-	fmt.Fprintln(w, "<b>request.TLS:</b>", r.TLS, "</br>")
-
-	fmt.Fprintln(w, "<br><br>")
-
 	hosts := r.URL.Query()["host"]
 	for _, host := range hosts {
 		ips, time, _ := lookup(host)
 		fmt.Fprintf(w, "lookup <b>%s</b>: %+v (%s)<br>\n", host, ips, time)
 	}
 
-	fmt.Fprintln(w, "<br><br>")
-
-	fmt.Fprintln(w, "<b>Request Headers:</b></br>")
+	fmt.Fprintln(w, "<b>request.RequestURI:</b>", html.EscapeString(r.RequestURI), "<br>")
+	fmt.Fprintln(w, "<b>request.RemoteAddr:</b>", html.EscapeString(r.RemoteAddr), "<br>")
+	fmt.Fprintln(w, "<b>request.TLS:</b>", r.TLS, "<br>")
+	fmt.Fprintln(w, "<b>Request Headers:</b><br>")
 	for _, k := range requestKeys {
-		fmt.Fprintln(w, k, ":", r.Header[k], "</br>")
+		fmt.Fprintln(w, k, ":", r.Header[k], "<br>")
 	}
 
 }
