@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -67,6 +68,23 @@ func lookup(host string) ([]string, string, error) {
 }
 
 func main() {
+	startupDuration := os.Getenv("STARTUP_DURATION")
+	if startupDuration != "" {
+		fmt.Printf("delaying startup for %s\n", startupDuration)
+		d, err := time.ParseDuration(startupDuration)
+		if err != nil {
+			log.Fatal(err)
+		}
+		time.Sleep(d)
+	}
+
+	fail := os.Getenv("DIE_TRYING")
+	if fail != "" {
+		fmt.Println("eaten by a grue")
+		os.Exit(1)
+	}
+
 	http.HandleFunc("/", handler)
+	fmt.Println("listening on port 8080")
 	http.ListenAndServe(":8080", nil)
 }
